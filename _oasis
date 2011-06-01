@@ -1,0 +1,32 @@
+# +-------------------------------------------------------------------+
+# | Package parameters                                                |
+# +-------------------------------------------------------------------+
+
+OASISFormat: 0.1
+OCamlVersion: >= 3.12
+Name: ocamlcv
+Version: 0.1
+LicenseFile: COPYING
+License: LGPL-2.1 with ocaml linking exception
+Authors:
+  Moi
+Homepage: http://crans.org/none
+BuildTools: ocamlbuild
+Plugins: DevFiles (0.2), META (0.2)
+
+Synopsis: opencv for ocaml
+Description:
+  A nice description
+
+# +-------------------------------------------------------------------+
+# | Libraries                                                         |
+# +-------------------------------------------------------------------+
+
+Library "cv"
+  Path: src/
+  Modules:
+    OpenCv
+  CSources:
+    cv_caml.c
+  XMETADescription: Core Opencv
+  BuildDepends:
