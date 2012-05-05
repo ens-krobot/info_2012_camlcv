@@ -7,13 +7,13 @@ type iscolor_ (* int *)
 type color_conversion_ (* int *)
 type int_var
 
-type channel_num_ = [ `One | `Two | `Three | `Foor ]
+type channel_num_ = [ `Channel_1 | `Channel_2 | `Channel_3 | `Channel_4 ]
 type 'a channel_num = int
 
-let one = 1
-let two = 2
-let three = 3
-let four = 4
+let channel_1 = 1
+let channel_2 = 2
+let channel_3 = 3
+let channel_4 = 4
 
 type cvType =
   | IPL_DEPTH_1U
@@ -127,6 +127,15 @@ type window_option =
   | CV_WINDOW_DEFAULT
   | CV_WINDOW_AUTOSIZE
 
+type threshold_type =
+  | CV_THRESH_BINARY
+  | CV_THRESH_BINARY_INV
+  | CV_THRESH_TRUNC
+  | CV_THRESH_TOZERO
+  | CV_THRESH_TOZERO_INV
+  | CV_THRESH_MASK
+  | CV_THRESH_OTSU
+
 type ('a,'b) conversion = color_conversion
 
 let bgr2hsv = CV_BGR2HSV
@@ -137,7 +146,7 @@ external cvLoadImage : string -> iscolor_ -> ('a,'b,'c) iplImage = "ocaml_cvLoad
 external cvNamedWindow : string -> int -> unit = "ocaml_cvNamedWindow"
 external cvCreateTrackbar : string -> string -> int_var -> int -> int = "ocaml_cvCreateTrackbar"
 external cvCvtColor : ('a,'b,'c) iplImage -> ('d,'e,'f) iplImage -> color_conversion_ -> unit = "ocaml_cvCvtColor"
-
+external cvThreshold : ('a,'b,'c) iplImage -> ('d,'e,'f) iplImage -> float -> float -> threshold_type -> unit = "ocaml_cvThreshold"
 
 external create_int_var : int -> int_var = "create_int_var"
 external get_cvType : cvType -> cvType_ = "ocaml_get_cvType"
@@ -148,7 +157,6 @@ external image_size : ('a,'b,'c) iplImage -> (int*int) = "ocaml_image_size"
 external image_channels : ('a,'b,'c) iplImage -> int = "ocaml_image_channels"
 external image_depth : ('a,'b,'c) iplImage -> int = "ocaml_image_depth"
 external image_data_order : ('a,'b,'c) iplImage -> int = "ocaml_image_data_order"
-
 
 (* type float_3point = *)
 (*     { mutable f0 : float; *)

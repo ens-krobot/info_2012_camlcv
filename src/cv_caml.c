@@ -337,6 +337,33 @@ CAMLprim value ocaml_cvCvtColor(value vsrc, value vdst, value vtype)
   CAMLreturn(Val_unit);
 }
 
+int threshold_table[] = {
+  CV_THRESH_BINARY,
+  CV_THRESH_BINARY_INV,
+  CV_THRESH_TRUNC,
+  CV_THRESH_TOZERO,
+  CV_THRESH_TOZERO_INV,
+  CV_THRESH_MASK,
+  CV_THRESH_OTSU
+};
+
+int ocaml_get_threshold(int vtype)
+{
+  return (Val_int(threshold_table[Int_val(vtype)]));
+}
+
+CAMLprim value ocaml_cvThreshold(value vsrc, value vdst, value vthreshold,
+                                 value vmaxValue, value vthresholdType)
+{
+  CAMLparam5(vsrc, vdst, vthreshold, vmaxValue, vthresholdType);
+  cvThreshold(Image_val(vsrc)->image,
+              Image_val(vdst)->image,
+              Double_val(vthreshold),
+              Double_val(vmaxValue),
+              threshold_table[Int_val(vthresholdType)]);
+  CAMLreturn(Val_unit);
+}
+
 
 /* CAMLprim value ocaml_get_float_3point(value vimage, value vindex, value vres) */
 /* { */
@@ -384,8 +411,8 @@ CAMLprim value ocaml_image_to_bigarray(value vimage)
   CAMLlocal1(ba);
   intnat dim[2];
   IplImage* image = Image_val(vimage)->image;
-  dim[0] = image->widthStep;
-  dim[1] = image->height;
+  dim[0] = image->height;
+  dim[1] = image->widthStep;
   ba = caml_ba_alloc(CAML_BA_UINT8|CAML_BA_EXTERNAL|CAML_BA_C_LAYOUT,2,
 		     image->imageData, dim );
   CAMLreturn(ba);
@@ -408,3 +435,13 @@ CAMLprim value ocaml_image_data_order(value vimage)
   CAMLparam1(vimage);
   CAMLreturn(Val_int(Image_val(vimage)->image->dataOrder));
 }
+
+/* find contours */
+/* TODO
+CAMLprim value ocaml_find_contour()
+{
+    CvMemStorage* stor;
+    CvSeq* cont;
+
+}
+*/

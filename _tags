@@ -1,3 +1,22 @@
 # OASIS_START
+# DO NOT EDIT (digest: b8f60d120ef9d7618b2ed02d64b8ef03)
+# Ignore VCS directories, you can use the same kind of rule outside 
+# OASIS_START/STOP if you want to exclude directories that contains 
+# useless stuff for the build process
+<**/.svn>: -traverse
+<**/.svn>: not_hygienic
+".bzr": -traverse
+".bzr": not_hygienic
+".hg": -traverse
+".hg": not_hygienic
+".git": -traverse
+".git": not_hygienic
+"_darcs": -traverse
+"_darcs": not_hygienic
+# Library cv
+"src/cv.cmxs": use_cv
+<src/cv.{cma,cmxa}>: use_libcv_stubs
+<src/*.ml{,i}>: pkg_bigarray
+"src/cv_caml.c": pkg_bigarray
 # OASIS_STOP
 <src/*>: use_C_opencv

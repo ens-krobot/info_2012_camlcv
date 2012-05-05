@@ -29,4 +29,4 @@ Library "cv"
   CSources:
     cv_caml.c
   XMETADescription: Core Opencv
-  BuildDepends:
+  BuildDepends: bigarray
