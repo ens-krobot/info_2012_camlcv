@@ -25,7 +25,8 @@ Description:
 Library "cv"
   Path: src/
   Modules:
-    OpenCv
+    CvCore,
+    CvHighGui
   CSources:
     cv_caml.c
   XMETADescription: Core Opencv
