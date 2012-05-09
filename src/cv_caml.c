@@ -963,21 +963,20 @@ CAMLprim value ocaml_cvInitUndistortMap( value vcameraMatrix, value vdistCoeffs,
 {
   CAMLparam4( vcameraMatrix, vdistCoeffs, vmap1, vmap2 );
 
-  /*
   CvMat cameraMatrix = CvMat_val(vcameraMatrix);
   CvMat distCoeffs = CvMat_val(vdistCoeffs);
-  */
-  /*
+
   cvInitUndistortMap(&cameraMatrix,
                      &distCoeffs,
                      Image_val(vmap1)->image,
                      Image_val(vmap2)->image);
-  */
+
+  /*
   cvInitUndistortMap(NULL,
                      NULL,
                      NULL,
                      NULL);
-
+  */
 
   CAMLreturn(Val_unit);
 }
