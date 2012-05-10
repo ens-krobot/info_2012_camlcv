@@ -54,17 +54,28 @@ val rgb2gray : ([`Channel_3],[`Channel_1]) conversion
 val gray2rgb : ([`Channel_1],[`Channel_3]) conversion
 val rgb2rgba : ([`Channel_3],[`Channel_4]) conversion
 
-val convert_color :
+val convert_color' :
   src:('c_src,'b) iplImage ->
   dst:('c_dst,'b) iplImage ->
   ('c_src,'c_dst) conversion ->
   unit
 
-val split_3 : ([`Channel_3],'b) iplImage -> ([`Channel_1],'b) iplImage ->
+val convert_color :
+  ('c_src,'b) iplImage ->
+  ('c_src,'c_dst) conversion ->
+  ('c_dst,'b) iplImage
+
+val split_3' : ([`Channel_3],'b) iplImage -> ([`Channel_1],'b) iplImage ->
   ([`Channel_1],'b) iplImage -> ([`Channel_1],'b) iplImage -> unit
 
-val merge_3 : ([`Channel_1],'b) iplImage -> ([`Channel_1],'b) iplImage ->
+val split : ([`Channel_3],'b) iplImage ->
+  ([`Channel_1],'b) iplImage * ([`Channel_1],'b) iplImage * ([`Channel_1],'b) iplImage
+
+val merge_3' : ([`Channel_1],'b) iplImage -> ([`Channel_1],'b) iplImage ->
   ([`Channel_1],'b) iplImage -> ([`Channel_3],'b) iplImage -> unit
+
+val merge : ([`Channel_1],'b) iplImage -> ([`Channel_1],'b) iplImage ->
+  ([`Channel_1],'b) iplImage -> ([`Channel_3],'b) iplImage
 
 (** threshold *)
 
@@ -81,17 +92,79 @@ type adaptive_method =
   | CV_ADAPTIVE_THRESH_MEAN_C
   | CV_ADAPTIVE_THRESH_GAUSSIAN_C
 
-val threshold : ('a,'b) iplImage -> ('d,'e) iplImage -> float -> float -> threshold_type -> unit
-(** [threshold src dst threshold maxValue thresholdType] *)
-val adaptive_threshold : ('a,'b) iplImage -> ('d,'e) iplImage -> float -> adaptive_method -> threshold_type -> int -> float -> unit
-(** [adaptive_threshold src dst maxValue adaptiveMethod thresholdType blockSize param1] *)
+val threshold' : ([`Channel_1],'b) iplImage -> ([`Channel_1],'b) iplImage ->
+  float -> float -> threshold_type -> unit
+(** [threshold' src dst threshold maxValue thresholdType] *)
+
+val threshold : ([`Channel_1],'b) iplImage -> float -> float -> threshold_type ->
+  ([`Channel_1],'b) iplImage
+(** [threshold src threshold maxValue thresholdType] *)
+
+val adaptive_threshold' : ([`Channel_1],'b) iplImage -> ([`Channel_1],'b) iplImage ->
+  float -> adaptive_method -> threshold_type -> int -> float -> unit
+(** [adaptive_threshold' src dst maxValue adaptiveMethod thresholdType blockSize param1] *)
+
+val adaptive_threshold : ([`Channel_1],'b) iplImage ->
+  float -> adaptive_method -> threshold_type -> int -> float -> ([`Channel_1],'b) iplImage
+(** [adaptive_threshold src maxValue adaptiveMethod thresholdType blockSize param1] *)
+
+(** edge detection *)
+
+val canny' : ([`Channel_1],[`U8]) iplImage -> ([`Channel_1],[`U8]) iplImage ->
+  float -> float -> int -> unit
+val canny : ([ `Channel_1 ], [ `U8 ]) iplImage ->
+  ?apertureSize:int ->
+  float -> float -> ([ `Channel_1 ], [ `U8 ]) iplImage
+(** [canny src threshold1 threshold2] *)
 
 (** drawing *)
 
-val cvCircle : ('a,[`U8]) iplImage -> cvPoint -> int -> cvScalar -> int -> unit
-val cvEllipse : ('a,[`U8]) iplImage -> cvPoint -> cvSize -> float -> float -> float -> cvScalar -> int -> unit
-val cvRectangle : ('a,[`U8]) iplImage -> cvPoint -> cvPoint -> cvScalar -> int -> unit
-val cvLine : ('a,[`U8]) iplImage -> cvPoint -> cvPoint -> cvScalar -> int -> unit
+type color = int * int * int (** red, green, blue *)
+
+val red : color
+val green : color
+val blue : color
+val yellow : color
+val magenta : color
+val black : color
+val white : color
+
+val circle : ('a, [ `U8 ]) iplImage ->
+  ?thickness:int -> ?color:color ->
+  cvPoint -> int -> unit
+
+type ellipse = {
+  ellipse_center : float * float;
+  ellipse_size : float * float;
+  ellipse_angle : float;
+}
+
+val ellipse : ('a, [ `U8 ]) iplImage ->
+  ?thickness:int ->
+  ?color:color ->
+  ?angle:float ->
+  ?start_angle:float -> ?end_angle:float -> cvPoint -> cvSize -> unit
+
+val ellipse' : ('a, [ `U8 ]) iplImage ->
+  ?thickness:int ->
+  ?color:color ->
+  ?start_angle:float -> ?end_angle:float ->
+  ellipse -> unit
+
+val rectangle : ('a, [ `U8 ]) iplImage ->
+  ?thickness:int -> ?color:color ->
+  cvPoint -> cvPoint -> unit
+
+val line : ('a, [ `U8 ]) iplImage ->
+  ?thickness:int -> ?color:color ->
+  cvPoint -> cvPoint -> unit
+
+val draw_points :
+  ?color:color ->
+  ?size:int ->
+  ('a, [ `U8 ]) iplImage ->
+  cvPoint2D32f array -> unit
+
 
 (**/**)
 val image_data_order : ('a,'b) iplImage -> int
@@ -129,13 +202,16 @@ val find_contours : ?mode:contour_retrieval_mode -> ?meth:contour_approximation_
 
 val draw_contours : ('a,[`U8]) iplImage -> seq -> cvScalar -> cvScalar -> int -> int -> cvPoint -> unit
 
-type ellipse = {
-  ellipse_center : float * float;
-  ellipse_size : float * float;
-  ellipse_angle : float;
-}
-
 val fit_ellipse : seq -> ellipse option
+
+val good_features_to_track :
+  ([ `Channel_1 ], 'a) iplImage ->
+  ?mask:([ `Channel_1 ], [ `U8 ]) iplImage ->
+  ?blockSize:int ->
+  ?useHarris:bool ->
+  ?k:float -> int -> float -> float -> cvPoint2D32f array
+(* [good_features_to_track image ?mask ?(blockSize=3) ?(useHarris=false) ?(k=0.04)
+   maxCorners qualityLevel minDistance] *)
 
 type calib_cb =
   | CV_CALIB_CB_ADAPTIVE_THRESH
@@ -165,12 +241,21 @@ val add_calibration_image :
   calibration -> ([ `Channel_1 ], [ `U8 ]) iplImage -> calibration
 val calibrate : calibration -> float * ( float array array * float array )
 
-val init_undistort_map : cvSize -> ( float array array * float array ) ->
-  ([ `Channel_1 ], [ `F32 ]) iplImage * ([ `Channel_1 ], [ `F32 ]) iplImage
+type remap
 
-external cvRemap :
-  ('a,'b) iplImage -> ('a,'b) iplImage ->
-  ([`Channel_1],[`F32]) iplImage ->
-  ([`Channel_1],[`F32]) iplImage ->
+val init_undistort_map : cvSize -> ( float array array * float array ) -> remap
+val remap' : remap -> ('a, 'b) iplImage -> ('a, 'b) iplImage -> unit
+val remap : remap -> ('a, 'b) iplImage -> ('a, 'b) iplImage
+
+type ('channel) cvMat_float32 =
+    (float, Bigarray.float32_elt, Bigarray.c_layout) Bigarray.Array3.t
+
+type ('channel) cvMat_float64 =
+    (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array3.t
+
+external cvFindHomography :
+  [`Channel_2] cvMat_float64 ->
+  [`Channel_2] cvMat_float64 ->
+  [`Channel_1] cvMat_float64 ->
   unit
-  = "cvRemap"
+    = "ocaml_cvFindHomography"

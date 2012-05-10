@@ -132,10 +132,89 @@ let rgb2gray = CV_RGB2GRAY
 let gray2rgb = CV_GRAY2RGB
 let rgb2rgba = CV_RGB2RGBA
 
+(* zeros are: I don't know *)
+let convert_output_channels = function
+  | CV_BGR2BGRA -> 4
+  | CV_RGB2RGBA -> 4
+  | CV_BGRA2BGR -> 3
+  | CV_RGBA2RGB -> 3
+  | CV_BGR2RGBA -> 4
+  | CV_RGB2BGRA -> 4
+  | CV_RGBA2BGR -> 3
+  | CV_BGRA2RGB -> 3
+  | CV_BGR2RGB -> 3
+  | CV_RGB2BGR -> 3
+  | CV_BGRA2RGBA -> 4
+  | CV_RGBA2BGRA -> 4
+  | CV_BGR2GRAY -> 1
+  | CV_RGB2GRAY -> 1
+  | CV_GRAY2BGR -> 3
+  | CV_GRAY2RGB -> 3
+  | CV_GRAY2BGRA -> 4
+  | CV_GRAY2RGBA -> 4
+  | CV_BGRA2GRAY -> 1
+  | CV_RGBA2GRAY -> 1
+  | CV_BGR2BGR565 -> 0
+  | CV_RGB2BGR565 -> 0
+  | CV_BGR5652BGR -> 3
+  | CV_BGR5652RGB -> 3
+  | CV_BGRA2BGR565 -> 0
+  | CV_RGBA2BGR565 -> 0
+  | CV_BGR5652BGRA -> 4
+  | CV_BGR5652RGBA -> 4
+  | CV_GRAY2BGR565 -> 0
+  | CV_BGR5652GRAY -> 1
+  | CV_BGR2BGR555 -> 0
+  | CV_RGB2BGR555 -> 0
+  | CV_BGR5552BGR -> 3
+  | CV_BGR5552RGB -> 3
+  | CV_BGRA2BGR555 -> 0
+  | CV_RGBA2BGR555 -> 0
+  | CV_BGR5552BGRA -> 4
+  | CV_BGR5552RGBA -> 4
+  | CV_GRAY2BGR555 -> 0
+  | CV_BGR5552GRAY -> 1
+  | CV_BGR2XYZ -> 3
+  | CV_RGB2XYZ -> 3
+  | CV_XYZ2BGR -> 3
+  | CV_XYZ2RGB -> 3
+  | CV_BGR2YCrCb -> 0
+  | CV_RGB2YCrCb -> 0
+  | CV_YCrCb2BGR -> 3
+  | CV_YCrCb2RGB -> 3
+  | CV_BGR2HSV -> 3
+  | CV_RGB2HSV -> 3
+  | CV_BGR2Lab -> 3
+  | CV_RGB2Lab -> 3
+  | CV_BayerBG2BGR -> 3
+  | CV_BayerGB2BGR -> 3
+  | CV_BayerRG2BGR -> 3
+  | CV_BayerGR2BGR -> 3
+  | CV_BayerBG2RGB -> 3
+  | CV_BayerGB2RGB -> 3
+  | CV_BayerRG2RGB -> 3
+  | CV_BayerGR2RGB -> 3
+  | CV_BGR2Luv -> 3
+  | CV_RGB2Luv -> 3
+  | CV_BGR2HLS -> 3
+  | CV_RGB2HLS -> 3
+  | CV_HSV2BGR -> 3
+  | CV_HSV2RGB -> 3
+  | CV_Lab2BGR -> 3
+  | CV_Lab2RGB -> 3
+  | CV_Luv2BGR -> 3
+  | CV_Luv2RGB -> 3
+  | CV_HLS2BGR -> 3
+  | CV_HLS2RGB -> 3
+
+
 external cvCreateImage : (int*int) -> cvType_ -> int -> ('a,'b) iplImage = "ocaml_cvCreateImage"
 external cvCvtColor : ('a,'b) iplImage -> ('d,'e) iplImage -> color_conversion_ -> unit = "ocaml_cvCvtColor"
-external threshold : ('a,'b) iplImage -> ('d,'e) iplImage -> float -> float -> threshold_type -> unit = "ocaml_cvThreshold"
-external adaptive_threshold : ('a,'b) iplImage -> ('d,'e) iplImage -> float -> adaptive_method -> threshold_type -> int -> float -> unit = "ocaml_cvAdaptiveThreshold_bytecode" "ocaml_cvAdaptiveThreshold"
+external threshold' : ([`Channel_1],'b) iplImage -> ([`Channel_1],'b) iplImage -> float -> float -> threshold_type -> unit = "ocaml_cvThreshold"
+external adaptive_threshold' : ('a,'b) iplImage -> ('d,'e) iplImage -> float -> adaptive_method -> threshold_type -> int -> float -> unit = "ocaml_cvAdaptiveThreshold_bytecode" "ocaml_cvAdaptiveThreshold"
+
+external canny' : ([`Channel_1],[`U8]) iplImage -> ([`Channel_1],[`U8]) iplImage ->
+  float -> float -> int -> unit = "ocaml_cvCanny"
 
 external cvSplit : ('a,'b) iplImage -> ([`Channel_1],'b) iplImage option ->
   ([`Channel_1],'b) iplImage option -> ([`Channel_1],'b) iplImage option ->
@@ -145,13 +224,8 @@ external cvMerge : ([`Channel_1],'b) iplImage option -> ([`Channel_1],'b) iplIma
   ([`Channel_1],'b) iplImage option -> ([`Channel_1],'b) iplImage option ->
   ('a,'b) iplImage -> unit = "ocaml_cvMerge"
 
-let split_3 src c1 c2 c3 =
-  cvSplit src (Some c1) (Some c2) (Some c3) None
-
-let merge_3 c1 c2 c3 dst =
-  cvMerge (Some c1) (Some c2) (Some c3) None dst
-
 external get_cvType : cvType -> cvType_ = "ocaml_get_cvType"
+external cvType_int : int -> cvType_ = "%identity"
 external get_color_conversion : color_conversion -> color_conversion_
   = "ocaml_get_color_conversion"
 external image_size : ('a,'b) iplImage -> (int*int) = "ocaml_image_size"
@@ -159,35 +233,50 @@ external image_channels : ('a,'b) iplImage -> int = "ocaml_image_channels"
 external image_depth : ('a,'b) iplImage -> int = "ocaml_image_depth"
 external image_data_order : ('a,'b) iplImage -> int = "ocaml_image_data_order"
 
-(* type float_3point = *)
-(*     { mutable f0 : float; *)
-(*       mutable f1 : float; *)
-(*       mutable f2 : float; } *)
+let create_image_from ?channels ?depth src =
+  let size = image_size src in
+  let type_ = cvType_int (match depth with
+    | None -> image_depth src
+    | Some d -> d) in
+  let channels = match channels with
+    | None -> image_channels src
+    | Some c -> c in
+  cvCreateImage size type_ channels
 
-(* type int_3point = *)
-(*     { mutable i0 : int; *)
-(*       mutable i1 : int; *)
-(*       mutable i2 : int; } *)
+let split_3' src c1 c2 c3 =
+  cvSplit src (Some c1) (Some c2) (Some c3) None
 
-(* external get_float_3point : *)
-(*   ([`One],[`F32],[`BGR | `RGB | `HSV ]) iplImage -> *)
-(*     float_point -> unit *)
-(*   = "ocaml_get_float_3point" "noalloc"  *)
+let split src =
+  let size = image_size src in
+  let type_ = cvType_int (image_depth src) in
+  let c1 = cvCreateImage size type_ 1 in
+  let c2 = cvCreateImage size type_ 1 in
+  let c3 = cvCreateImage size type_ 1 in
+  cvSplit src (Some c1) (Some c2) (Some c3) None;
+  c1,c2,c3
 
-(* external set_float_3point : *)
-(*   ([`One],[`F32],[`BGR | `RGB | `HSV ]) iplImage -> *)
-(*     float_point -> unit *)
-(*   = "ocaml_set_float_3point" "noalloc"  *)
+let merge_3' c1 c2 c3 dst =
+  cvMerge (Some c1) (Some c2) (Some c3) None dst
 
-(* external unsafe_get_int_3point : *)
-(*   ([`One],[`U8],[<`BGR | `RGB | `HSV ]) iplImage -> *)
-(*     int -> int_3point -> unit *)
-(*   = "ocaml_get_int_3point" "noalloc" *)
+let merge c1 c2 c3 =
+  let dst = create_image_from ~channels:3 c1 in
+  cvMerge (Some c1) (Some c2) (Some c3) None dst;
+  dst
 
-(* external unsafe_set_int_3point : *)
-(*   ([`One],[`U8],[<`BGR | `RGB | `HSV ]) iplImage -> *)
-(*     int -> int_3point -> unit *)
-(*   = "ocaml_set_int_3point" "noalloc" *)
+let threshold src threshold maxValue thresholdType =
+  let dst = create_image_from src in
+  threshold' src dst threshold maxValue thresholdType;
+  dst
+
+let adaptive_threshold src maxValue adaptiveMethod thresholdType blockSize param1 =
+  let dst = create_image_from src in
+  adaptive_threshold' src dst maxValue adaptiveMethod thresholdType blockSize param1;
+  dst
+
+let canny src ?(apertureSize=3) th1 th2 =
+  let dst = create_image_from src in
+  canny' src dst th1 th2 apertureSize;
+  dst
 
 type image_data = (int, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array2.t
 
@@ -198,8 +287,17 @@ external zero_image : ('a,'b) iplImage -> unit = "ocaml_cvZero"
 external clone_image : ('a,'b) iplImage -> ('a,'b) iplImage = "ocaml_cvCloneImage"
 
 let create_image ~x ~y _type i = cvCreateImage (x,y) (get_cvType _type) i
-let convert_color ~src ~dst color_conversion =
+
+let convert_color' ~src ~dst color_conversion =
   cvCvtColor src dst (get_color_conversion color_conversion)
+
+let convert_color src color_conversion =
+  let channels = convert_output_channels color_conversion in
+  let size = image_size src in
+  let type_ = cvType_int (image_depth src) in
+  let dst = cvCreateImage size type_ channels in
+  cvCvtColor src dst (get_color_conversion color_conversion);
+  dst
 
 type cvScalar = float * float * float * float
 type cvPoint = int * int
@@ -220,6 +318,50 @@ external cvEllipse : ('a,[`U8]) iplImage -> cvPoint -> cvSize ->
     "ocaml_cvEllipse_bytecode" "ocaml_cvEllipse"
 external cvRectangle : ('a,[`U8]) iplImage -> cvPoint -> cvPoint -> cvScalar -> int -> unit = "ocaml_cvRectangle"
 external cvLine : ('a,[`U8]) iplImage -> cvPoint -> cvPoint -> cvScalar -> int -> unit = "ocaml_cvLine"
+
+type color = int * int * int
+
+let red = 255, 0, 0
+let green = 0, 255, 0
+let blue = 0, 0, 255
+let yellow = 255, 255, 0
+let magenta = 255, 0, 255
+let black = 0, 0, 0
+let white = 255, 255, 255
+
+let scalar_color (r,g,b) = (float b, float g, float r, 0.)
+
+let circle dst ?(thickness=1) ?(color=blue) center radius =
+  cvCircle dst center radius (scalar_color color) thickness
+
+let ellipse dst ?(thickness=1) ?(color=blue) ?(angle=0.) ?(start_angle=0.) ?(end_angle=360.)
+    center size =
+  cvEllipse dst center size angle start_angle end_angle (scalar_color color) thickness
+
+type ellipse = {
+  ellipse_center : float * float;
+  ellipse_size : float * float;
+  ellipse_angle : float;
+}
+
+let ellipse' dst ?thickness ?color ?start_angle ?end_angle
+    {
+      ellipse_center = x,y;
+      ellipse_size = w,h;
+      ellipse_angle = angle;
+    } =
+  ellipse dst ?thickness ?color ?start_angle ?end_angle
+    (int_of_float x, int_of_float y)
+    (int_of_float w, int_of_float h)
+
+let rectangle dst ?(thickness=1) ?(color=blue) p1 p2 =
+  cvRectangle dst p1 p2 (scalar_color color) thickness
+
+let line dst ?(thickness=1) ?(color=blue) p1 p2 =
+  cvLine dst p1 p2 (scalar_color color) thickness
+
+let draw_points ?(color=red) ?(size=2) i a =
+  Array.iter (fun (x,y) -> circle i ~color (int_of_float x,int_of_float y) size) a
 
 (* memory handling *)
 type cvMemStorage
@@ -291,12 +433,6 @@ external cvDrawContours : ('a,[`U8]) iplImage -> cvSeq -> cvScalar -> cvScalar -
 let draw_contours image seq in_color out_color level thickness offset =
   cvDrawContours image seq.seq in_color out_color level thickness offset
 
-type ellipse = {
-  ellipse_center : float * float;
-  ellipse_size : float * float;
-  ellipse_angle : float;
-}
-
 external cvFitEllipse2 : cvSeq -> (float * float * float * float * float) option = "ocaml_cvFitEllipse2"
 
 let fit_ellipse seq =
@@ -306,6 +442,25 @@ let fit_ellipse seq =
       Some { ellipse_center = x,y;
              ellipse_size = width,height;
              ellipse_angle = angle }
+
+external cvGoodFeaturesToTrack :
+  ([`Channel_1],'b) iplImage ->
+  (float, Bigarray.float32_elt, Bigarray.c_layout) Bigarray.Array2.t ->
+  float -> float ->
+  ([`Channel_1],[`U8]) iplImage option ->
+  int ->
+  bool ->
+  float ->
+  int
+  = "ocaml_cvGoodFeaturesToTrack_bytecode" "ocaml_cvGoodFeaturesToTrack"
+
+let good_features_to_track image ?mask ?(blockSize=3) ?(useHarris=false) ?(k=0.04)
+    maxCorners qualityLevel minDistance =
+  let ba = Bigarray.Array2.create Bigarray.float32 Bigarray.c_layout maxCorners 2 in
+  let count = cvGoodFeaturesToTrack image ba
+    qualityLevel minDistance
+    mask blockSize useHarris k in
+  Array.init count (fun i -> ba.{i,0}, ba.{i,1})
 
 type calib_cb =
   | CV_CALIB_CB_ADAPTIVE_THRESH
@@ -368,8 +523,12 @@ let find_corner_subpix ?(criteria=default_criteria) ?(winSize=11,11) ?(zeroZone=
 type ('channel) cvMat_float32 =
     (float, Bigarray.float32_elt, Bigarray.c_layout) Bigarray.Array3.t
 
+type ('channel) cvMat_float64 =
+    (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array3.t
+
 type ('channel) cvMat_int =
-    (int, Bigarray.int_elt, Bigarray.c_layout) Bigarray.Array3.t
+    (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array3.t
+(* there is no 64 bit type in CvMat... so stick to int32 *)
 
 external cvCalibrateCamera2 : [`Channel_3] cvMat_float32 -> [`Channel_2] cvMat_float32 ->
   [`Channel_1] cvMat_int -> cvSize -> [`Channel_1] cvMat_float32 ->
@@ -420,8 +579,8 @@ let calibrate (cal:calibration) =
   let img_pos = Bigarray.reshape_3
     (Bigarray.genarray_of_array3 img_pos)
     ((List.length state) * points) 1 2 in
-  let point_count = Array.create (List.length state) points in
-  let point_count = Bigarray.Array1.of_array Bigarray.int Bigarray.c_layout point_count in
+  let point_count = Array.map Int32.of_int (Array.create (List.length state) points) in
+  let point_count = Bigarray.Array1.of_array Bigarray.int32 Bigarray.c_layout point_count in
   let point_count = Bigarray.reshape_3
     (Bigarray.genarray_of_array1 point_count)
     (List.length state) 1 1 in
@@ -442,7 +601,9 @@ external cvInitUndistortMap :
   ([`Channel_1],[`F32]) iplImage ->
   ([`Channel_1],[`F32]) iplImage ->
   unit
-  = "cvInitUndistortMap"
+  = "ocaml_cvInitUndistortMap"
+
+type remap = ([ `Channel_1 ], [ `F32 ]) iplImage * ([ `Channel_1 ], [ `F32 ]) iplImage
 
 let init_undistort_map (x,y) (mat,v) =
   let mat = Bigarray.Array3.of_array Bigarray.float32 Bigarray.c_layout
@@ -459,4 +620,22 @@ external cvRemap :
   ([`Channel_1],[`F32]) iplImage ->
   ([`Channel_1],[`F32]) iplImage ->
   unit
-  = "cvRemap"
+  = "ocaml_cvRemap"
+
+let remap' ((mapx,mapy):remap) src dst =
+  cvRemap src dst mapx mapy
+
+let remap ((mapx,mapy):remap) src =
+  let size = image_size src in
+  let type_ = cvType_int (image_depth src) in
+  let channels = image_channels src in
+  let dst = cvCreateImage size type_ channels in
+  cvRemap src dst mapx mapy;
+  dst
+
+external cvFindHomography :
+  [`Channel_2] cvMat_float64 ->
+  [`Channel_2] cvMat_float64 ->
+  [`Channel_1] cvMat_float64 ->
+  unit
+    = "ocaml_cvFindHomography"

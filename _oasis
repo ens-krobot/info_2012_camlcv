@@ -29,5 +29,43 @@ Library "cv"
     CvHighGui
   CSources:
     cv_caml.c
+  CCopt: -x c++ -O2
+  CClib: -lstdc++
   XMETADescription: Core Opencv
   BuildDepends: bigarray
+
+Executable "leak"
+  Path: test/
+  MainIs: leak.ml
+  BuildDepends: cv
+
+Executable "test_drawing"
+  Path: test/
+  MainIs: test_drawing.ml
+  BuildDepends: cv
+
+Executable "test_good_feature_to_track"
+  Path: test/
+  MainIs: test_good_feature_to_track.ml
+  BuildDepends: cv
+
+Executable "test_improcess"
+  Path: test/
+  MainIs: test_improcess.ml
+  BuildDepends: cv
+
+Executable "test_split"
+  Path: test/
+  MainIs: test_split.ml
+  BuildDepends: cv
+
+Executable "test_threshold"
+  Path: test/
+  MainIs: test_threshold.ml
+  BuildDepends: cv
+
+Executable "test_find_chessboard_corners"
+  Path: test/
+  MainIs: test_find_chessboard_corners.ml
+  BuildDepends: cv
+
