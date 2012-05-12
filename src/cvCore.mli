@@ -11,6 +11,7 @@ type cvTermCriteria =
       termcrit_epsilon : bool;
       max_iter : int;
       epsilon : float; }
+type vec3f = float * float * float
 
 type ('chan_num,'depth) iplImage
 
@@ -210,8 +211,15 @@ val good_features_to_track :
   ?blockSize:int ->
   ?useHarris:bool ->
   ?k:float -> int -> float -> float -> cvPoint2D32f array
-(* [good_features_to_track image ?mask ?(blockSize=3) ?(useHarris=false) ?(k=0.04)
+(** [good_features_to_track image ?mask ?(blockSize=3) ?(useHarris=false) ?(k=0.04)
    maxCorners qualityLevel minDistance] *)
+
+ val houghCircles :
+   ('a, [ `U8 ]) iplImage ->
+   ?param1:float ->
+   ?param2:float ->
+   ?minRadius:int -> ?maxRadius:int -> float -> float -> vec3f array
+(** [houghCircles img dp minDist] *)
 
 type calib_cb =
   | CV_CALIB_CB_ADAPTIVE_THRESH

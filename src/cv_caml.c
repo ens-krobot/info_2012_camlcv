@@ -23,6 +23,8 @@ extern "C" {
 #undef uint64
 #undef schar
 
+using namespace cv;
+
 #define ERRWRAP(expr) \
 try \
 { \
@@ -31,6 +33,129 @@ try \
 catch (const cv::Exception &e) \
 { \
     caml_failwith(e.what()); \
+}
+
+static Vec3f Vec3f_val(value v) {
+  double v0 = Double_val(Field(v,0));
+  double v1 = Double_val(Field(v,1));
+  double v2 = Double_val(Field(v,2));
+  return (Vec3f(v0,v1,v2));
+}
+
+static value Val_Vec3f(Vec3f v) {
+  CAMLparam0();
+  CAMLlocal1(res);
+  res = caml_alloc_tuple(3);
+  for(int i = 0; i < 3; i++) {
+    Field(res,i) = caml_copy_double(v[i]);
+  }
+  CAMLreturn(res);
+}
+
+/* c++ vector */
+
+template <typename Type>
+vector<Type>* Vector_val(value v)
+{
+  return *(vector<Type>**) Data_custom_val(v);
+}
+
+extern "C" void caml_finalize_vector(value vec)
+{
+  //it is the same finalizer for all types... problems ?
+  vector<void*>* del = Vector_val<void*>(vec);
+  delete del;
+  return;
+}
+
+static struct custom_operations vector_operations = {
+  (char*) "ocaml_vector",
+  caml_finalize_vector,
+  custom_compare_default,
+  custom_hash_default,
+  custom_serialize_default,
+  custom_deserialize_default
+};
+template <typename Type>
+value ocaml_create_vector(value v)
+{
+  CAMLparam1(v);
+  CAMLlocal1(res);
+  res = caml_alloc_custom(&vector_operations, sizeof(vector<Type>*), 1, 10);
+  *(vector<Type>**) Data_custom_val(res) = new vector<Type>();
+  CAMLreturn(res);
+}
+
+template <typename Type>
+value ocaml_vector_size(value v)
+{
+  CAMLparam1(v);
+  vector<Type>* vec = Vector_val<Type>(v);
+  CAMLreturn(Val_int(vec->size()));
+}
+
+template <typename Type>
+value ocaml_vector_add(value v, value vx, Type x)
+{
+  CAMLparam2(v,vx);
+  Vector_val<Type>(v)->push_back(x);
+  CAMLreturn(Val_unit);
+}
+
+template <typename Type>
+Type ocaml_vector_get(value v, value x)
+{
+  vector<Type>* vec = Vector_val<Type>(v);
+  Type ret;
+  try {
+    ret = vec->at(Int_val(x));
+  }
+  catch (const std::exception &e) {
+    caml_failwith(e.what());
+  };
+  return(ret);
+}
+
+extern "C" CAMLprim value ocaml_create_int_vector(value v)
+{
+  return(ocaml_create_vector<int>(v));
+}
+
+extern "C" CAMLprim value ocaml_vector_size_int(value v)
+{
+  return(ocaml_vector_size<int>(v));
+}
+
+extern "C" CAMLprim value ocaml_vector_add_int(value v, value x)
+{
+  return(ocaml_vector_add<int>(v,x,Int_val(x)));
+}
+
+extern "C" CAMLprim value ocaml_vector_get_int(value v, value x)
+{
+  CAMLparam2(v,x);
+  CAMLreturn(Val_int(ocaml_vector_get<int>(v,x)));
+}
+
+extern "C" CAMLprim value ocaml_create_Vec3f_vector(value v)
+{
+  return(ocaml_create_vector<Vec3f>(v));
+}
+
+extern "C" CAMLprim value ocaml_vector_size_Vec3f(value v)
+{
+  return(ocaml_vector_size<Vec3f>(v));
+}
+
+extern "C" CAMLprim value ocaml_vector_add_Vec3f(value v, value x)
+{
+  return(ocaml_vector_add<Vec3f>(v,x,Vec3f_val(x)));
+}
+extern "C" CAMLprim value ocaml_vector_get_Vec3f(value v, value x)
+{
+  CAMLparam2(v,x);
+  Vec3f r = ocaml_vector_get<Vec3f>(v,x);
+  CAMLreturn(Val_Vec3f(r));
 }
 
 /* basic caml value conversions */
@@ -742,6 +867,22 @@ extern "C" CAMLprim value ocaml_cvCanny(value vimage, value vedges,
   CAMLreturn(Val_unit);
 }
 
+/*
+extern "C" CAMLprim value ocaml_medianBlur(value vsrc, value vdst, value ksize)
+{
+  CAMLparam3(vsrc, vdst, ksize);
+
+  Mat dst = Mat(Image_val(vdst)->image);
+
+  ERRWRAP(
+  medianBlur(Mat(Image_val(vsrc)->image),
+             &dst,
+             Int_val(ksize)));
+
+  CAMLreturn(Val_unit);
+}
+*/
+
 extern "C" CAMLprim value ocaml_cvGoodFeaturesToTrack(
            value image,
            value vcorners,
@@ -911,17 +1052,50 @@ extern "C" CAMLprim value ocaml_cvFindContours(value vimg, value vstor, value vm
   CAMLlocal1(res);
   CvSeq *first_contour = 0;
 
+  ERRWRAP(
   cvFindContours(Image_val(vimg)->image,
                  CvMemStorage_val(vstor),
                  &first_contour,
                  sizeof(CvContour),
                  contour_retrieval_mode_table[Int_val(vmode)],
                  contour_approximation_method_table[Int_val(vmethod)],
-                 CvPoint_val(voffset));
+                 CvPoint_val(voffset)));
 
   res = caml_alloc_cvSeq(first_contour);
 
   CAMLreturn(res);
+}
+
+extern "C" CAMLprim value ocaml_HoughCircles(value vimg,
+                                             value vcircles,
+                                             value dp,
+                                             value minDist,
+                                             value param1,
+                                             value param2,
+                                             value minRadius,
+                                             value maxRadius)
+{
+  CAMLparam4( vimg, vcircles, dp, minDist );
+  CAMLxparam4( param1, param2, minRadius, maxRadius );
+
+  ERRWRAP(
+  HoughCircles(Mat(Image_val(vimg)->image),
+               *Vector_val<Vec3f>(vcircles),
+               CV_HOUGH_GRADIENT,
+               Double_val(dp),
+               Double_val(minDist),
+               Double_val(param1),
+               Double_val(param2),
+               Int_val(minRadius),
+               Int_val(maxRadius) ));
+
+  CAMLreturn(Val_unit);
+}
+
+extern "C" CAMLprim value ocaml_HoughCircles_bytecode( value * argv, int argn )
+{
+  return ocaml_HoughCircles( argv[0], argv[1], argv[2], argv[3],
+                             argv[4], argv[5], argv[6], argv[7] );
 }
 
 static value Val_some(value v)

@@ -311,6 +311,14 @@ type cvTermCriteria =
       termcrit_epsilon : bool;
       max_iter : int;
       epsilon : float; }
+type vec3f = float * float * float
+
+type vec3f_vect
+
+external create_vec3f_vect : unit -> vec3f_vect = "ocaml_create_Vec3f_vector"
+external vec3f_vect_size : vec3f_vect -> int = "ocaml_vector_size_Vec3f"
+external vec3f_vect_add : vec3f_vect -> vec3f -> unit = "ocaml_vector_add_Vec3f"
+external vec3f_vect_get : vec3f_vect -> int -> vec3f = "ocaml_vector_get_Vec3f"
 
 external cvCircle : ('a,[`U8]) iplImage -> cvPoint -> int -> cvScalar -> int -> unit = "ocaml_cvCircle"
 external cvEllipse : ('a,[`U8]) iplImage -> cvPoint -> cvSize ->
@@ -462,6 +470,18 @@ let good_features_to_track image ?mask ?(blockSize=3) ?(useHarris=false) ?(k=0.0
     mask blockSize useHarris k in
   Array.init count (fun i -> ba.{i,0}, ba.{i,1})
 
+external houghCircles' :
+  ('a,[`U8]) iplImage ->
+  vec3f_vect ->
+  float -> float -> float -> float ->
+  int -> int -> unit
+    = "ocaml_HoughCircles_bytecode" "ocaml_HoughCircles"
+
+let houghCircles img ?(param1=100.) ?(param2=100.) ?(minRadius=0) ?(maxRadius=0) dp minDist =
+  let vec = create_vec3f_vect () in
+  houghCircles' img vec dp minDist param1 param2 minRadius maxRadius;
+  Array.init (vec3f_vect_size vec) (fun i -> vec3f_vect_get vec i)
+
 type calib_cb =
   | CV_CALIB_CB_ADAPTIVE_THRESH
   | CV_CALIB_CB_NORMALIZE_IMAGE
@@ -517,7 +537,6 @@ let find_corner_subpix ?(criteria=default_criteria) ?(winSize=11,11) ?(zeroZone=
       cvFindCornerSubPix i ba count (11,11) (-1,-1) criteria;
     end
 
-
 (** camera calibration *)
 
 type ('channel) cvMat_float32 =
@@ -540,8 +559,8 @@ type calibration = cvSize * float * cvSize option * ((float*float) array array*(
 let init_calibration cb_size square_size : calibration = (cb_size, square_size, None, [])
 
 let corner_positions (x,y) square_size =
-  Array.init x
-    (fun i -> Array.init y
+  Array.init y
+    (fun i -> Array.init x
       (fun j -> (float j) *. square_size, (float i) *. square_size, 0.))
 
 let add_calibration_image ((cb_size, square_size, i_size, state):calibration) image : calibration =

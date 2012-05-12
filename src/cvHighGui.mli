@@ -107,7 +107,8 @@ val destroy_all_windows : unit -> unit
 val show_image : string -> ('a,'b) iplImage -> unit
 (** [show_image window image] display the image [image] in the window
     [window] *)
-val wait_key : int -> char
+val wait_key' : int -> int
+val wait_key : int -> char option
 (** [wait_key time] wait for [time] milliseconds for an event to
     occur.  If [time < 0] it waits indefinitely. Nothing happens in
     the gui until this function is called. *)

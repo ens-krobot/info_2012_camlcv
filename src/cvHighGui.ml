@@ -43,7 +43,14 @@ let named_window ?(option=CV_WINDOW_DEFAULT) name =
 external destroy_window : string -> unit = "ocaml_cvDestroyWindow"
 external destroy_all_windows : unit -> unit = "ocaml_cvDestroyAllWindows"
 
-external wait_key : int -> char = "ocaml_cvWaitKey"
+external wait_key' : int -> int = "ocaml_cvWaitKey"
+
+let wait_key i =
+  let c = wait_key' i in
+  if c > 0
+  then Some (Char.chr (c land 255))
+  else None
+
 external show_image : string -> ('a,'b) iplImage -> unit = "ocaml_cvShowImage"
 
 type int_var

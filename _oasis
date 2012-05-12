@@ -37,35 +37,47 @@ Library "cv"
 Executable "leak"
   Path: test/
   MainIs: leak.ml
+  Install: false
   BuildDepends: cv
 
 Executable "test_drawing"
   Path: test/
   MainIs: test_drawing.ml
+  Install: false
   BuildDepends: cv
 
 Executable "test_good_feature_to_track"
   Path: test/
   MainIs: test_good_feature_to_track.ml
+  Install: false
   BuildDepends: cv
 
 Executable "test_improcess"
   Path: test/
   MainIs: test_improcess.ml
+  Install: false
   BuildDepends: cv
 
 Executable "test_split"
   Path: test/
   MainIs: test_split.ml
+  Install: false
   BuildDepends: cv
 
 Executable "test_threshold"
   Path: test/
   MainIs: test_threshold.ml
+  Install: false
   BuildDepends: cv
 
 Executable "test_find_chessboard_corners"
   Path: test/
   MainIs: test_find_chessboard_corners.ml
+  Install: false
   BuildDepends: cv
 
+Executable "test_calib"
+  Path: test/
+  MainIs: test_calib.ml
+  Install: false
+  BuildDepends: cv
