@@ -8,6 +8,7 @@ val load_color : [`Channel_3] load_color
 val load_grayscale : [`Channel_1] load_color
 
 val load_image : string -> 'depth load_color -> ('depth,[`U8]) iplImage
+val save_image : string -> ('a,'b) iplImage -> int
 
 (** camera capture *)
 

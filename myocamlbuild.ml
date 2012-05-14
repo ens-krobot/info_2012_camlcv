@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 4a00093589bdfb2586c46078313938d7) *)
+(* DO NOT EDIT (digest: 956f5288d32a7a1c8abb0d0365a3324e) *)
 module OASISGettext = struct
 # 21 "/media/data/ocaml/oasis/src/oasis/OASISGettext.ml"
   
@@ -556,6 +556,8 @@ let package_default =
                  S
                    [
                       A "-ccopt";
+                      A "-g";
+                      A "-ccopt";
                       A "-x";
                       A "-ccopt";
                       A "c++";
@@ -574,9 +576,11 @@ let package_default =
 
 let dispatch_default = MyOCamlbuildBase.dispatch_default package_default;;
 
-# 578 "myocamlbuild.ml"
+# 580 "myocamlbuild.ml"
 (* OASIS_STOP *)
 open Ocamlbuild_plugin
+
+let () = Ocamlbuild_pack.Log.classic_display := true
 
 let pkg_config flags package =
   with_temp_file "lwt" "pkg-config"
@@ -592,6 +596,8 @@ let define_c_library ?(cplusplus=false) ~name ~c_name () =
 
   (* Add flags for linking with the C library: *)
   flag ["ocamlmklib"; "c"; tag] & S lib;
+
+  (* flag ["ocamlmklib"; "c"] & S[A"-verbose"]; *)
 
   (* C stubs using the C library must be compiled with the library
      specifics flags: *)

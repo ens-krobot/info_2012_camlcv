@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: c93fc9a48b0322812d7d9f91a98e5b8f)
+# DO NOT EDIT (digest: dbce26cf07aa2393b0384ca639ce129c)
 # Ignore VCS directories, you can use the same kind of rule outside 
 # OASIS_START/STOP if you want to exclude directories that contains 
 # useless stuff for the build process
@@ -23,33 +23,64 @@
 "src/libcv_stubs.a": oasis_library_cv_cclib
 "src/dllcv_stubs.so": oasis_library_cv_cclib
 <src/cv.{cma,cmxa}>: use_libcv_stubs
+<src/*.ml{,i}>: pkg_str
 <src/*.ml{,i}>: pkg_bigarray
+"src/cv_caml.c": pkg_str
 "src/cv_caml.c": pkg_bigarray
 # Executable test_threshold
 "test/test_threshold.byte": use_cv
+"test/test_threshold.byte": pkg_str
 "test/test_threshold.byte": pkg_bigarray
+# Executable test_detect_lines
+"test/test_detect_lines.byte": use_cv
+"test/test_detect_lines.byte": pkg_str
+"test/test_detect_lines.byte": pkg_bigarray
 # Executable leak
 "test/leak.byte": use_cv
+"test/leak.byte": pkg_str
 "test/leak.byte": pkg_bigarray
+# Executable test_houghLines
+"test/test_houghLines.byte": use_cv
+"test/test_houghLines.byte": pkg_str
+"test/test_houghLines.byte": pkg_bigarray
 # Executable test_find_chessboard_corners
 "test/test_find_chessboard_corners.byte": use_cv
+"test/test_find_chessboard_corners.byte": pkg_str
 "test/test_find_chessboard_corners.byte": pkg_bigarray
+# Executable test_detect_ellipse
+"test/test_detect_ellipse.byte": use_cv
+"test/test_detect_ellipse.byte": pkg_str
+"test/test_detect_ellipse.byte": pkg_bigarray
 # Executable test_improcess
 "test/test_improcess.byte": use_cv
+"test/test_improcess.byte": pkg_str
 "test/test_improcess.byte": pkg_bigarray
 # Executable test_good_feature_to_track
 "test/test_good_feature_to_track.byte": use_cv
+"test/test_good_feature_to_track.byte": pkg_str
 "test/test_good_feature_to_track.byte": pkg_bigarray
+# Executable test_homography
+"test/test_homography.byte": use_cv
+"test/test_homography.byte": pkg_str
+"test/test_homography.byte": pkg_bigarray
 # Executable test_drawing
 "test/test_drawing.byte": use_cv
+"test/test_drawing.byte": pkg_str
 "test/test_drawing.byte": pkg_bigarray
 # Executable test_split
 "test/test_split.byte": use_cv
+"test/test_split.byte": pkg_str
 "test/test_split.byte": pkg_bigarray
+# Executable test_contour_canny
+"test/test_contour_canny.byte": use_cv
+"test/test_contour_canny.byte": pkg_str
+"test/test_contour_canny.byte": pkg_bigarray
 # Executable test_calib
 "test/test_calib.byte": use_cv
+"test/test_calib.byte": pkg_str
 "test/test_calib.byte": pkg_bigarray
 <test/*.ml{,i}>: use_cv
+<test/*.ml{,i}>: pkg_str
 <test/*.ml{,i}>: pkg_bigarray
 # OASIS_STOP
 <src/*>: use_C_opencv

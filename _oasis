@@ -29,10 +29,10 @@ Library "cv"
     CvHighGui
   CSources:
     cv_caml.c
-  CCopt: -x c++ -O2
+  CCopt: -g -x c++ -O2
   CClib: -lstdc++
   XMETADescription: Core Opencv
-  BuildDepends: bigarray
+  BuildDepends: bigarray, str
 
 Executable "leak"
   Path: test/
@@ -79,5 +79,35 @@ Executable "test_find_chessboard_corners"
 Executable "test_calib"
   Path: test/
   MainIs: test_calib.ml
+  Install: false
+  BuildDepends: cv
+
+Executable "test_homography"
+  Path: test/
+  MainIs: test_homography.ml
+  Install: false
+  BuildDepends: cv
+
+Executable "test_detect_ellipse"
+  Path: test/
+  MainIs: test_detect_ellipse.ml
+  Install: false
+  BuildDepends: cv
+
+Executable "test_houghLines"
+  Path: test/
+  MainIs: test_houghLines.ml
+  Install: false
+  BuildDepends: cv
+
+Executable "test_contour_canny"
+  Path: test/
+  MainIs: test_contour_canny.ml
+  Install: false
+  BuildDepends: cv
+
+Executable "test_detect_lines"
+  Path: test/
+  MainIs: test_detect_lines.ml
   Install: false
   BuildDepends: cv

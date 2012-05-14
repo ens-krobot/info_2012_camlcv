@@ -20,6 +20,8 @@ external cvLoadImage : string -> iscolor_ -> ('a,'b) iplImage = "ocaml_cvLoadIma
 
 let load_image file iscolor = cvLoadImage file (get_iscolor iscolor)
 
+external save_image : string -> ('a,'b) iplImage -> int = "ocaml_cvSaveImage"
+
 (* capture *)
 
 type cvCapture

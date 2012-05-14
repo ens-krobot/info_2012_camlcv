@@ -35,6 +35,17 @@ catch (const cv::Exception &e) \
     caml_failwith(e.what()); \
 }
 
+static value Val_some(value v)
+{
+  CAMLparam1(v);
+  CAMLlocal1(res);
+  res = caml_alloc(1,0);
+  Field(res,0) = v;
+  CAMLreturn(res);
+}
+
+static value Val_none = Val_unit;
+
 static Vec3f Vec3f_val(value v) {
   double v0 = Double_val(Field(v,0));
   double v1 = Double_val(Field(v,1));
@@ -48,6 +59,42 @@ static value Val_Vec3f(Vec3f v) {
   res = caml_alloc_tuple(3);
   for(int i = 0; i < 3; i++) {
     Field(res,i) = caml_copy_double(v[i]);
+  }
+  CAMLreturn(res);
+}
+
+static Vec4f Vec4f_val(value v) {
+  double v0 = Double_val(Field(v,0));
+  double v1 = Double_val(Field(v,1));
+  double v2 = Double_val(Field(v,2));
+  double v3 = Double_val(Field(v,3));
+  return (Vec4f(v0,v1,v2,v3));
+}
+
+static value Val_Vec4f(Vec4f v) {
+  CAMLparam0();
+  CAMLlocal1(res);
+  res = caml_alloc_tuple(4);
+  for(int i = 0; i < 4; i++) {
+    Field(res,i) = caml_copy_double(v[i]);
+  }
+  CAMLreturn(res);
+}
+
+static Vec4i Vec4i_val(value v) {
+  int v0 = Int_val(Field(v,0));
+  int v1 = Int_val(Field(v,1));
+  int v2 = Int_val(Field(v,2));
+  int v3 = Int_val(Field(v,3));
+  return (Vec4i(v0,v1,v2,v3));
+}
+
+static value Val_Vec4i(Vec4i v) {
+  CAMLparam0();
+  CAMLlocal1(res);
+  res = caml_alloc_tuple(4);
+  for(int i = 0; i < 4; i++) {
+    Field(res,i) = Val_int(v[i]);
   }
   CAMLreturn(res);
 }
@@ -156,6 +203,48 @@ extern "C" CAMLprim value ocaml_vector_get_Vec3f(value v, value x)
   CAMLparam2(v,x);
   Vec3f r = ocaml_vector_get<Vec3f>(v,x);
   CAMLreturn(Val_Vec3f(r));
+}
+
+extern "C" CAMLprim value ocaml_create_Vec4f_vector(value v)
+{
+  return(ocaml_create_vector<Vec4f>(v));
+}
+
+extern "C" CAMLprim value ocaml_vector_size_Vec4f(value v)
+{
+  return(ocaml_vector_size<Vec4f>(v));
+}
+
+extern "C" CAMLprim value ocaml_vector_add_Vec4f(value v, value x)
+{
+  return(ocaml_vector_add<Vec4f>(v,x,Vec4f_val(x)));
+}
+extern "C" CAMLprim value ocaml_vector_get_Vec4f(value v, value x)
+{
+  CAMLparam2(v,x);
+  Vec4f r = ocaml_vector_get<Vec4f>(v,x);
+  CAMLreturn(Val_Vec4f(r));
+}
+
+extern "C" CAMLprim value ocaml_create_Vec4i_vector(value v)
+{
+  return(ocaml_create_vector<Vec4i>(v));
+}
+
+extern "C" CAMLprim value ocaml_vector_size_Vec4i(value v)
+{
+  return(ocaml_vector_size<Vec4i>(v));
+}
+
+extern "C" CAMLprim value ocaml_vector_add_Vec4i(value v, value x)
+{
+  return(ocaml_vector_add<Vec4i>(v,x,Vec4i_val(x)));
+}
+extern "C" CAMLprim value ocaml_vector_get_Vec4i(value v, value x)
+{
+  CAMLparam2(v,x);
+  Vec4i r = ocaml_vector_get<Vec4i>(v,x);
+  CAMLreturn(Val_Vec4i(r));
 }
 
 /* basic caml value conversions */
@@ -284,7 +373,7 @@ static CvMat CvMat_val(value v) {
   return (cvMat(rows, cols, type, data));
 }
 
-int cvType_table[] = {
+uint cvType_table[] = {
   IPL_DEPTH_1U,
   IPL_DEPTH_8U,
   IPL_DEPTH_16U,
@@ -410,14 +499,45 @@ extern "C" CAMLprim value ocaml_cvLoadImage(value vfile, value viscolor)
   CAMLreturn (res);
 }
 
+extern "C" CAMLprim value ocaml_cvSaveImage(value vfile, value vimg)
+{
+  CAMLparam2 (vfile, vimg);
+
+  int ret = cvSaveImage(String_val(vfile),
+                        Image_val(vimg)->image);
+
+  CAMLreturn (Val_int(ret));
+}
+
 extern "C" CAMLprim value ocaml_cvCloneImage(value vimage)
 {
   CAMLparam1 (vimage);
   CAMLlocal1 (res);
   IplImage* image = cvCloneImage( Image_val(vimage)->image );
-  if(image == 0) { caml_failwith("load_image: can't load image"); };
   res = caml_alloc_IplImage(image);
   CAMLreturn (res);
+}
+
+extern "C" CAMLprim value ocaml_cvCopy(value vsrc, value vdst, value vmask)
+{
+  CAMLparam3 (vsrc, vdst, vmask);
+  CvArr* mask = Is_long(vmask) ? NULL : Image_val(Field(vmask,0))->image;
+  ERRWRAP(
+  cvCopy(Image_val(vsrc)->image,
+         Image_val(vdst)->image,
+         mask));
+  CAMLreturn (Val_unit);
+}
+
+extern "C" CAMLprim value ocaml_cvSet(value vdst, value vval, value vmask)
+{
+  CAMLparam3 (vdst, vval, vmask);
+  CvArr* mask = Is_long(vmask) ? NULL : Image_val(Field(vmask,0))->image;
+  ERRWRAP(
+  cvSet(Image_val(vdst)->image,
+        CvScalar_val(vval),
+        mask));
+  CAMLreturn (Val_unit);
 }
 
 extern "C" CAMLprim value ocaml_cvZero(value vimage)
@@ -672,8 +792,10 @@ extern "C" CAMLprim value ocaml_set_int_var(value vvar, value vval)
 extern "C" CAMLprim value ocaml_cvCreateTrackbar(value vname, value vwindow, value vvar, value vmax)
 {
   CAMLparam4 (vname, vwindow, vvar, vmax);
-  int res = cvCreateTrackbar(String_val(vname), String_val(vwindow),
-			     Int_var_val(vvar), Int_val(vmax), NULL);
+  int res;
+  ERRWRAP(
+  res = cvCreateTrackbar(String_val(vname), String_val(vwindow),
+                         Int_var_val(vvar), Int_val(vmax), NULL));
   CAMLreturn (Val_int(res));
 }
 
@@ -867,7 +989,65 @@ extern "C" CAMLprim value ocaml_cvCanny(value vimage, value vedges,
   CAMLreturn(Val_unit);
 }
 
-/*
+extern "C" CAMLprim value ocaml_cvEqualizeHist(value vsrc, value vdst)
+{
+  CAMLparam2 (vsrc, vdst);
+
+  ERRWRAP(
+  cvEqualizeHist(Image_val(vsrc)->image,
+                 Image_val(vdst)->image));
+  CAMLreturn (Val_unit);
+}
+
+
+int morph_table[] = {
+  MORPH_RECT,
+  MORPH_ELLIPSE,
+  MORPH_CROSS
+};
+
+extern "C" CAMLprim value ocaml_dilate(value vsrc, value vdst, value shape,
+                                        value ksize, value viter)
+{
+  CAMLparam5 (vsrc, vdst, shape, ksize, viter);
+
+  Mat sel = getStructuringElement(morph_table[Int_val(shape)],
+                                  CvSize_val(ksize));
+
+  Mat src = Mat(Image_val(vsrc)->image);
+  Mat dst = Mat(Image_val(vdst)->image);
+
+  ERRWRAP(
+  dilate(src,
+        dst,
+        sel,
+        Point(-1,-1),
+        Int_val(viter)));
+
+  CAMLreturn (Val_unit);
+}
+
+extern "C" CAMLprim value ocaml_erode(value vsrc, value vdst, value shape,
+                                        value ksize, value viter)
+{
+  CAMLparam5 (vsrc, vdst, shape, ksize, viter);
+
+  Mat sel = getStructuringElement(morph_table[Int_val(shape)],
+                                  CvSize_val(ksize));
+
+  Mat src = Mat(Image_val(vsrc)->image);
+  Mat dst = Mat(Image_val(vdst)->image);
+
+  ERRWRAP(
+  erode(src,
+        dst,
+        sel,
+        Point(-1,-1),
+        Int_val(viter)));
+
+  CAMLreturn (Val_unit);
+}
+
 extern "C" CAMLprim value ocaml_medianBlur(value vsrc, value vdst, value ksize)
 {
   CAMLparam3(vsrc, vdst, ksize);
@@ -876,12 +1056,43 @@ extern "C" CAMLprim value ocaml_medianBlur(value vsrc, value vdst, value ksize)
 
   ERRWRAP(
   medianBlur(Mat(Image_val(vsrc)->image),
-             &dst,
+             dst,
              Int_val(ksize)));
 
   CAMLreturn(Val_unit);
 }
-*/
+
+extern "C" CAMLprim value ocaml_blur(value vsrc, value vdst, value ksize)
+{
+  CAMLparam3(vsrc, vdst, ksize);
+
+  Mat dst = Mat(Image_val(vdst)->image);
+
+  ERRWRAP(
+  blur(Mat(Image_val(vsrc)->image),
+       dst,
+       CvSize_val(ksize)));
+
+  CAMLreturn(Val_unit);
+}
+
+extern "C" CAMLprim value ocaml_GaussianBlur(value vsrc, value vdst, value ksize,
+                                             value sigmaX, value sigmaY)
+{
+  CAMLparam5(vsrc, vdst, ksize, sigmaX, sigmaY);
+
+  Mat dst = Mat(Image_val(vdst)->image);
+
+  ERRWRAP(
+  GaussianBlur(Mat(Image_val(vsrc)->image),
+               dst,
+               CvSize_val(ksize),
+               Double_val(sigmaX),
+               Double_val(sigmaY)));
+
+  CAMLreturn(Val_unit);
+}
+
 
 extern "C" CAMLprim value ocaml_cvGoodFeaturesToTrack(
            value image,
@@ -976,9 +1187,10 @@ extern "C" CAMLprim value ocaml_cvEllipse(value vimg, value vcenter,
 {
   CAMLparam5(vimg, vcenter, vaxes, vangle, vstart_angle);
   CAMLxparam3(vend_angle, vcolor, vthickness);
+  ERRWRAP(
   cvEllipse(Image_val(vimg)->image, CvPoint_val(vcenter), CvSize_val(vaxes),
             Double_val(vangle), Double_val(vstart_angle), Double_val(vend_angle),
-            CvScalar_val(vcolor), Int_val(vthickness), CV_AA, 0);
+            CvScalar_val(vcolor), Int_val(vthickness), CV_AA, 0));
   CAMLreturn(Val_unit);
 }
 
@@ -1061,7 +1273,12 @@ extern "C" CAMLprim value ocaml_cvFindContours(value vimg, value vstor, value vm
                  contour_approximation_method_table[Int_val(vmethod)],
                  CvPoint_val(voffset)));
 
-  res = caml_alloc_cvSeq(first_contour);
+  if(first_contour) {
+    res = Val_some(caml_alloc_cvSeq(first_contour));
+  }
+  else {
+    res = Val_none;
+  }
 
   CAMLreturn(res);
 }
@@ -1098,21 +1315,42 @@ extern "C" CAMLprim value ocaml_HoughCircles_bytecode( value * argv, int argn )
                              argv[4], argv[5], argv[6], argv[7] );
 }
 
-static value Val_some(value v)
+/* houghlines */
+
+extern "C" CAMLprim value ocaml_HoughLinesP(value vimg,
+                                            value vlines,
+                                            value rho,
+                                            value theta,
+                                            value threshold,
+                                            value minLineLength,
+                                            value maxLineGap)
 {
-  CAMLparam1(v);
-  CAMLlocal1(res);
-  res = caml_alloc(1,0);
-  Field(res,0) = v;
-  CAMLreturn(res);
+  CAMLparam5( vimg, vlines, rho, theta, threshold );
+  CAMLxparam2( minLineLength, maxLineGap );
+
+  ERRWRAP(
+  HoughLinesP(Mat(Image_val(vimg)->image),
+              *Vector_val<Vec4i>(vlines),
+              Double_val(rho),
+              Double_val(theta),
+              Int_val(threshold),
+              Double_val(minLineLength),
+              Double_val(maxLineGap)));
+
+  CAMLreturn(Val_unit);
 }
 
-static value Val_none = Val_unit;
+extern "C" CAMLprim value ocaml_HoughLinesP_bytecode( value * argv, int argn )
+{
+  return ocaml_HoughLinesP( argv[0], argv[1], argv[2], argv[3],
+                            argv[4], argv[5], argv[6] );
+}
 
 extern "C" CAMLprim value ocaml_CvSeq_info(value vseq)
 {
   CAMLparam1(vseq);
   CAMLlocal1(res);
+
   CvSeq *seq = CvSeq_val(vseq);
 
   res = caml_alloc_tuple(4);
@@ -1160,7 +1398,8 @@ extern "C" CAMLprim value ocaml_cvFitEllipse2( value vpoints )
   res = caml_alloc_tuple(5);
   CvSeq *points = CvSeq_val(vpoints);
   if(points->total < 5) CAMLreturn(Val_none);
-  CvBox2D box = cvFitEllipse2(points);
+  CvBox2D box;
+  ERRWRAP (box = cvFitEllipse2(points));
   Field(res,0) = caml_copy_double(box.center.x);
   Field(res,1) = caml_copy_double(box.center.y);
   Field(res,2) = caml_copy_double(box.size.width);
@@ -1332,4 +1571,16 @@ extern "C" CAMLprim value ocaml_cvFindHomography( value vsrc, value vdst, value 
                            NULL));
 
   CAMLreturn(Val_unit);
+}
+
+extern "C" CAMLprim value ocaml_cvInvert( value vsrc, value vdst )
+{
+  CAMLparam2( vsrc, vdst );
+  CvMat src = CvMat_val(vsrc);
+  CvMat dst = CvMat_val(vdst);
+
+  double ret;
+  ERRWRAP(ret = cvInvert( &src, &dst, CV_LU));
+
+  CAMLreturn(caml_copy_double(ret));
 }

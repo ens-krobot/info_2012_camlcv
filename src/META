@@ -1,8 +1,8 @@
 # OASIS_START
-# DO NOT EDIT (digest: 3f508b1b1a49417ae0d748f2f8bc10e1)
+# DO NOT EDIT (digest: 74e425b91260fb882dfbdc09cc41cc88)
 version = "0.1"
 description = "Core Opencv"
-requires = "bigarray"
+requires = "bigarray str"
 archive(byte) = "cv.cma"
 archive(native) = "cv.cmxa"
 exists_if = "cv.cma"

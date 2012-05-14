@@ -12,6 +12,8 @@ type cvTermCriteria =
       max_iter : int;
       epsilon : float; }
 type vec3f = float * float * float
+type vec4f = float * float * float * float
+type vec4i = int * int * int * int
 
 type ('chan_num,'depth) iplImage
 
@@ -34,6 +36,15 @@ val create_image : x:int -> y:int -> 'depth image_depth -> 'chan_num channel_num
   ('chan_num,'depth) iplImage
 val clone_image : ('a,'b) iplImage -> ('a,'b) iplImage
 val zero_image : ('a,'b) iplImage -> unit
+
+val copy' : ('a,'b) iplImage -> ('a,'b) iplImage ->
+  ([`Channel_1],[`U8]) iplImage option -> unit
+
+val copy : ('a,'b) iplImage ->
+  ([`Channel_1],[`U8]) iplImage option -> ('a,'b) iplImage
+
+val set : ('a,'b) iplImage -> cvScalar ->
+  ([`Channel_1],[`U8]) iplImage option -> unit
 
 val image_size : ('a,'b) iplImage -> int * int
 val image_channels : ('a,'b) iplImage -> int
@@ -109,6 +120,9 @@ val adaptive_threshold : ([`Channel_1],'b) iplImage ->
   float -> adaptive_method -> threshold_type -> int -> float -> ([`Channel_1],'b) iplImage
 (** [adaptive_threshold src maxValue adaptiveMethod thresholdType blockSize param1] *)
 
+val between : ([`Channel_1],[`U8]) iplImage -> int -> int -> ([`Channel_1],[`U8]) iplImage
+(** [between src min max] is 255 for each point p when min <= p < max *)
+
 (** edge detection *)
 
 val canny' : ([`Channel_1],[`U8]) iplImage -> ([`Channel_1],[`U8]) iplImage ->
@@ -117,6 +131,47 @@ val canny : ([ `Channel_1 ], [ `U8 ]) iplImage ->
   ?apertureSize:int ->
   float -> float -> ([ `Channel_1 ], [ `U8 ]) iplImage
 (** [canny src threshold1 threshold2] *)
+
+(** image processing *)
+
+val blur' : ('a,'b) iplImage -> ('a,'b) iplImage -> cvSize -> unit
+val blur : ?size:cvSize -> ('a, 'b) iplImage -> ('a, 'b) iplImage
+
+val gaussian_blur' : ('a,'b) iplImage -> ('a,'b) iplImage -> cvSize -> float ->
+  float -> unit
+val gaussian_blur : ?size:cvSize -> ('a,'b) iplImage -> float ->
+  float -> ('a,'b) iplImage
+
+val median_blur' : ('a,'b) iplImage -> ('a,'b) iplImage -> int -> unit
+val median_blur : ?size:int -> ('a, 'b) iplImage -> ('a, 'b) iplImage
+
+val equalize_hist' : ([`Channel_1],[`U8]) iplImage ->
+  ([`Channel_1],[`U8]) iplImage -> unit
+val equalize_hist : ([`Channel_1],[`U8]) iplImage ->
+  ([`Channel_1],[`U8]) iplImage
+
+type morph_shape =
+  | MORPH_RECT
+  | MORPH_ELLIPSE
+  | MORPH_CROSS
+
+val dilate' : ('a, [ `U8 ]) iplImage ->
+  ('a, [ `U8 ]) iplImage ->
+  morph_shape -> cvSize -> int -> unit
+
+val erode' : ('a, [ `U8 ]) iplImage ->
+  ('a, [ `U8 ]) iplImage ->
+  morph_shape -> cvSize -> int -> unit
+
+val dilate : ?iter:int ->
+  ?shape:morph_shape ->
+  ('a, [ `U8 ]) iplImage ->
+  cvSize -> ('a, [ `U8 ]) iplImage
+
+val erode : ?iter:int ->
+  ?shape:morph_shape ->
+  ('a, [ `U8 ]) iplImage ->
+  cvSize -> ('a, [ `U8 ]) iplImage
 
 (** drawing *)
 
@@ -188,22 +243,32 @@ type contour_approximation_method =
   | CV_CHAIN_APPROX_TC89_KCOS
   | CV_LINK_RUNS
 
-type seq
+type contour
 
-type seq_info = {
-  h_prev : seq option;
-  h_next : seq option;
-  v_prev : seq option;
-  v_next : seq option;
+type contour_info = {
+  h_prev : contour option;
+  h_next : contour option;
+  v_prev : contour option;
+  v_next : contour option;
 }
 
-val seq_info : seq -> seq_info
+type contours = Contour of (contour * contours list)
+
+val contours : contour option -> contours list
+
+val contour_info : contour -> contour_info
 val find_contours : ?mode:contour_retrieval_mode -> ?meth:contour_approximation_method ->
-  ([`Channel_1],[`U8]) iplImage -> seq
+  ([`Channel_1],[`U8]) iplImage -> contour option
 
-val draw_contours : ('a,[`U8]) iplImage -> seq -> cvScalar -> cvScalar -> int -> int -> cvPoint -> unit
+val draw_contours :
+  ?in_color:color ->
+  ?out_color:color ->
+  ?thickness:int ->
+  ?offset:cvPoint ->
+  ?level:int ->
+  ('a, [ `U8 ]) iplImage -> contour -> unit
 
-val fit_ellipse : seq -> ellipse option
+val fit_ellipse : contour -> ellipse option
 
 val good_features_to_track :
   ([ `Channel_1 ], 'a) iplImage ->
@@ -220,6 +285,12 @@ val good_features_to_track :
    ?param2:float ->
    ?minRadius:int -> ?maxRadius:int -> float -> float -> vec3f array
 (** [houghCircles img dp minDist] *)
+
+ val houghLinesP :
+   ('a, [ `U8 ]) iplImage ->
+   ?minLineLength:float ->
+   ?maxLineGap:float -> float -> float -> int -> vec4i array
+(** [houghLinesP img rho theta threshold] *)
 
 type calib_cb =
   | CV_CALIB_CB_ADAPTIVE_THRESH
@@ -249,21 +320,18 @@ val add_calibration_image :
   calibration -> ([ `Channel_1 ], [ `U8 ]) iplImage -> calibration
 val calibrate : calibration -> float * ( float array array * float array )
 
+val load_calibration_file : string -> ( float array array * float array )
+val load_homography_file : string -> float array array
+
 type remap
 
 val init_undistort_map : cvSize -> ( float array array * float array ) -> remap
 val remap' : remap -> ('a, 'b) iplImage -> ('a, 'b) iplImage -> unit
 val remap : remap -> ('a, 'b) iplImage -> ('a, 'b) iplImage
 
-type ('channel) cvMat_float32 =
-    (float, Bigarray.float32_elt, Bigarray.c_layout) Bigarray.Array3.t
+val find_homography : obj_pos: (float*float) array -> img_pos: (float*float) array ->
+  float array array
 
-type ('channel) cvMat_float64 =
-    (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array3.t
+val invert : float array array -> float * float array array
 
-external cvFindHomography :
-  [`Channel_2] cvMat_float64 ->
-  [`Channel_2] cvMat_float64 ->
-  [`Channel_1] cvMat_float64 ->
-  unit
-    = "ocaml_cvFindHomography"
+val mult : float array array -> float array -> float array

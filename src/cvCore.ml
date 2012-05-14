@@ -6,6 +6,26 @@ type color_conversion_ (* int *)
 type channel_num_ = [ `Channel_1 | `Channel_2 | `Channel_3 | `Channel_4 ]
 type 'a channel_num = int
 
+type cvScalar = float * float * float * float
+type cvPoint = int * int
+type cvPoint2D32f = float * float
+type cvPoint3D32f = float * float * float
+type cvPoint2D64f = float * float
+type cvPoint3D64f = float * float * float
+type cvSize = int * int
+type cvTermCriteria =
+    { termcrit_iter : bool;
+      termcrit_epsilon : bool;
+      max_iter : int;
+      epsilon : float; }
+type vec3f = float * float * float
+type vec4f = float * float * float * float
+type vec4i = int * int * int * int
+
+type vec3f_vect
+type vec4f_vect
+type vec4i_vect
+
 let channel_1 = 1
 let channel_2 = 2
 let channel_3 = 3
@@ -215,6 +235,26 @@ external adaptive_threshold' : ('a,'b) iplImage -> ('d,'e) iplImage -> float -> 
 
 external canny' : ([`Channel_1],[`U8]) iplImage -> ([`Channel_1],[`U8]) iplImage ->
   float -> float -> int -> unit = "ocaml_cvCanny"
+external blur' : ('a,'b) iplImage -> ('a,'b) iplImage -> cvSize -> unit = "ocaml_blur"
+external gaussian_blur' : ('a,'b) iplImage -> ('a,'b) iplImage -> cvSize -> float ->
+  float -> unit = "ocaml_GaussianBlur"
+external median_blur' : ('a,'b) iplImage -> ('a,'b) iplImage -> int -> unit = "ocaml_medianBlur"
+
+external equalize_hist' : ([`Channel_1],[`U8]) iplImage ->
+  ([`Channel_1],[`U8]) iplImage -> unit = "ocaml_cvEqualizeHist"
+
+type morph_shape =
+  | MORPH_RECT
+  | MORPH_ELLIPSE
+  | MORPH_CROSS
+
+external dilate' : ('a,[`U8]) iplImage ->
+  ('a,[`U8]) iplImage -> morph_shape -> cvSize -> int -> unit
+    = "ocaml_dilate"
+
+external erode' : ('a,[`U8]) iplImage ->
+  ('a,[`U8]) iplImage -> morph_shape -> cvSize -> int -> unit
+    = "ocaml_erode"
 
 external cvSplit : ('a,'b) iplImage -> ([`Channel_1],'b) iplImage option ->
   ([`Channel_1],'b) iplImage option -> ([`Channel_1],'b) iplImage option ->
@@ -278,13 +318,76 @@ let canny src ?(apertureSize=3) th1 th2 =
   canny' src dst th1 th2 apertureSize;
   dst
 
+let blur ?(size=(3,3)) src =
+  let dst = create_image_from src in
+  blur' src dst size;
+  dst
+
+let gaussian_blur ?(size=(3,3)) src sigmaX sigmaY =
+  let dst = create_image_from src in
+  gaussian_blur' src dst size sigmaX sigmaY;
+  dst
+
+let median_blur ?(size=3) src =
+  let dst = create_image_from src in
+  median_blur' src dst size;
+  dst
+
+let equalize_hist src =
+  let dst = create_image_from src in
+  equalize_hist' src dst;
+  dst
+
+let dilate ?(iter=1) ?(shape=MORPH_ELLIPSE) src size =
+  let dst = create_image_from src in
+  dilate' src dst shape size iter;
+  dst
+
+let erode ?(iter=1) ?(shape=MORPH_ELLIPSE) src size =
+  let dst = create_image_from src in
+  erode' src dst shape size iter;
+  dst
+
 type image_data = (int, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array2.t
 
 external image_data : ('a,[`U8]) iplImage -> image_data = "ocaml_image_to_bigarray"
 
+(*
+let between src min max =
+  let dst = create_image_from ~channels:1 ~depth:8 src in
+  let data_src = image_data src in
+  let data_dst = image_data dst in
+  let x, y = Bigarray.Array2.dim1 data_src,
+    Bigarray.Array2.dim2 data_src in
+  for i = 0 to x - 1 do
+    for j = 0 to y - 1 do
+      let r = Bigarray.Array2.unsafe_get data_src i j in
+      Bigarray.Array2.unsafe_set data_dst i j (if r >= min && r < max then 255 else 0);
+    done
+  done;
+  dst
+*)
+
 external zero_image : ('a,'b) iplImage -> unit = "ocaml_cvZero"
 
 external clone_image : ('a,'b) iplImage -> ('a,'b) iplImage = "ocaml_cvCloneImage"
+
+external copy' : ('a,'b) iplImage -> ('a,'b) iplImage -> ([`Channel_1],[`U8]) iplImage option -> unit
+  = "ocaml_cvCopy"
+
+let copy src mask =
+  let dst = create_image_from src in
+  zero_image dst;
+  copy' src dst mask;
+  dst
+
+external set : ('a,'b) iplImage -> cvScalar -> ([`Channel_1],[`U8]) iplImage option -> unit
+  = "ocaml_cvSet"
+
+let between src min max =
+  let i_max = threshold src (float max -. 1.) 255. CV_THRESH_BINARY_INV in
+  let i_min = threshold src (float min -. 1.) 255. CV_THRESH_BINARY in
+  copy i_max (Some i_min)
 
 let create_image ~x ~y _type i = cvCreateImage (x,y) (get_cvType _type) i
 
@@ -299,26 +402,20 @@ let convert_color src color_conversion =
   cvCvtColor src dst (get_color_conversion color_conversion);
   dst
 
-type cvScalar = float * float * float * float
-type cvPoint = int * int
-type cvPoint2D32f = float * float
-type cvPoint3D32f = float * float * float
-type cvPoint2D64f = float * float
-type cvPoint3D64f = float * float * float
-type cvSize = int * int
-type cvTermCriteria =
-    { termcrit_iter : bool;
-      termcrit_epsilon : bool;
-      max_iter : int;
-      epsilon : float; }
-type vec3f = float * float * float
-
-type vec3f_vect
-
 external create_vec3f_vect : unit -> vec3f_vect = "ocaml_create_Vec3f_vector"
 external vec3f_vect_size : vec3f_vect -> int = "ocaml_vector_size_Vec3f"
 external vec3f_vect_add : vec3f_vect -> vec3f -> unit = "ocaml_vector_add_Vec3f"
 external vec3f_vect_get : vec3f_vect -> int -> vec3f = "ocaml_vector_get_Vec3f"
+
+external create_vec4f_vect : unit -> vec4f_vect = "ocaml_create_Vec4f_vector"
+external vec4f_vect_size : vec4f_vect -> int = "ocaml_vector_size_Vec4f"
+external vec4f_vect_add : vec4f_vect -> vec4f -> unit = "ocaml_vector_add_Vec4f"
+external vec4f_vect_get : vec4f_vect -> int -> vec4f = "ocaml_vector_get_Vec4f"
+
+external create_vec4i_vect : unit -> vec4i_vect = "ocaml_create_Vec4i_vector"
+external vec4i_vect_size : vec4i_vect -> int = "ocaml_vector_size_Vec4i"
+external vec4i_vect_add : vec4i_vect -> vec4i -> unit = "ocaml_vector_add_Vec4i"
+external vec4i_vect_get : vec4i_vect -> int -> vec4i = "ocaml_vector_get_Vec4i"
 
 external cvCircle : ('a,[`U8]) iplImage -> cvPoint -> int -> cvScalar -> int -> unit = "ocaml_cvCircle"
 external cvEllipse : ('a,[`U8]) iplImage -> cvPoint -> cvSize ->
@@ -344,7 +441,11 @@ let circle dst ?(thickness=1) ?(color=blue) center radius =
 
 let ellipse dst ?(thickness=1) ?(color=blue) ?(angle=0.) ?(start_angle=0.) ?(end_angle=360.)
     center size =
-  cvEllipse dst center size angle start_angle end_angle (scalar_color color) thickness
+  let (x,y) = center in
+  let (w,h) = size in
+  (* try to avoid segfault in opencv drawing... *)
+  if x > 10000 || y > 10000 || w > 10000 || h > 10000 then ()
+  else cvEllipse dst center size angle start_angle end_angle (scalar_color color) thickness
 
 type ellipse = {
   ellipse_center : float * float;
@@ -359,8 +460,9 @@ let ellipse' dst ?thickness ?color ?start_angle ?end_angle
       ellipse_angle = angle;
     } =
   ellipse dst ?thickness ?color ?start_angle ?end_angle
+    ~angle
     (int_of_float x, int_of_float y)
-    (int_of_float w, int_of_float h)
+    (int_of_float (w/.2.), int_of_float (h/.2.))
 
 let rectangle dst ?(thickness=1) ?(color=blue) p1 p2 =
   cvRectangle dst p1 p2 (scalar_color color) thickness
@@ -394,7 +496,7 @@ type contour_approximation_method =
 type cvSeq
 
 external cvFindContours : ([`Channel_1],[`U8]) iplImage -> cvMemStorage ->
-  contour_retrieval_mode -> contour_approximation_method -> cvPoint -> cvSeq =
+  contour_retrieval_mode -> contour_approximation_method -> cvPoint -> cvSeq option =
     "ocaml_cvFindContours"
 
 type cvSeq_info = {
@@ -406,40 +508,60 @@ type cvSeq_info = {
 
 external cvSeq_info : cvSeq -> cvSeq_info = "ocaml_CvSeq_info"
 
-type seq = {
+type contour = {
   seq_stor : cvMemStorage;
   seq : cvSeq;
 }
 
-type seq_info = {
-  h_prev : seq option;
-  h_next : seq option;
-  v_prev : seq option;
-  v_next : seq option;
+type contour_info = {
+  h_prev : contour option;
+  h_next : contour option;
+  v_prev : contour option;
+  v_next : contour option;
 }
 
 let add_stor s = function
   | None -> None
   | Some v -> Some { seq_stor = s; seq = v }
 
-let seq_info seq =
+let contour_info seq =
   let info = cvSeq_info seq.seq in
   { h_prev = add_stor seq.seq_stor info.cv_h_prev;
     h_next = add_stor seq.seq_stor info.cv_h_next;
     v_prev = add_stor seq.seq_stor info.cv_v_prev;
     v_next = add_stor seq.seq_stor info.cv_v_next; }
 
+type contours = Contour of (contour * contours list)
+
+let rec contour_list contour =
+  let { h_next } = contour_info contour in
+  match h_next with
+    | None -> [contour]
+    | Some v -> contour::(contour_list v)
+
+let rec contours c =
+  match c with
+    | None -> []
+    | Some c ->
+      let l = contour_list c in
+      let aux c = Contour (c,contours (contour_info c).v_next) in
+      List.map aux l
+
 let find_contours ?(mode=CV_RETR_LIST) ?(meth=CV_CHAIN_APPROX_SIMPLE) image =
   let stor = create_CvMemStorage () in
-  let cvSeq = cvFindContours image stor mode meth (0,0) in
-  { seq_stor = stor;
-    seq = cvSeq }
+  match cvFindContours image stor mode meth (0,0) with
+    | Some cvSeq ->
+      Some { seq_stor = stor;
+             seq = cvSeq }
+    | None -> None
 
 external cvDrawContours : ('a,[`U8]) iplImage -> cvSeq -> cvScalar -> cvScalar ->
   int -> int -> cvPoint -> unit = "ocaml_cvDrawContours_bytecode" "ocaml_cvDrawContours"
 
-let draw_contours image seq in_color out_color level thickness offset =
-  cvDrawContours image seq.seq in_color out_color level thickness offset
+let draw_contours ?(in_color=red) ?(out_color=green) ?(thickness=1) ?(offset=(0,0))
+    ?(level=0) image seq =
+  cvDrawContours image seq.seq
+    (scalar_color in_color) (scalar_color out_color) level thickness offset
 
 external cvFitEllipse2 : cvSeq -> (float * float * float * float * float) option = "ocaml_cvFitEllipse2"
 
@@ -481,6 +603,17 @@ let houghCircles img ?(param1=100.) ?(param2=100.) ?(minRadius=0) ?(maxRadius=0)
   let vec = create_vec3f_vect () in
   houghCircles' img vec dp minDist param1 param2 minRadius maxRadius;
   Array.init (vec3f_vect_size vec) (fun i -> vec3f_vect_get vec i)
+
+external houghLinesP' :
+  ('a,[`U8]) iplImage ->
+  vec4i_vect ->
+  float -> float -> int -> float -> float -> unit
+    = "ocaml_HoughLinesP_bytecode" "ocaml_HoughLinesP"
+
+let houghLinesP img ?(minLineLength=0.) ?(maxLineGap=0.) rho theta threshold =
+  let vec = create_vec4i_vect () in
+  houghLinesP' img vec rho theta threshold minLineLength maxLineGap;
+  Array.init (vec4i_vect_size vec) (fun i -> vec4i_vect_get vec i)
 
 type calib_cb =
   | CV_CALIB_CB_ADAPTIVE_THRESH
@@ -658,3 +791,69 @@ external cvFindHomography :
   [`Channel_1] cvMat_float64 ->
   unit
     = "ocaml_cvFindHomography"
+
+let find_homography ~obj_pos ~img_pos =
+  let convert a =
+    Bigarray.Array3.of_array Bigarray.float64 Bigarray.c_layout
+      [|Array.map (fun (x,y) -> [|x;y|]) a|] in
+  let out =
+    Bigarray.Array3.of_array Bigarray.float64 Bigarray.c_layout
+      (Array.init 3 (fun _ -> Array.init 3 (fun _ -> [|0.|]))) in
+  cvFindHomography (convert obj_pos) (convert img_pos) out;
+  Array.init 3 (fun i -> Array.init 3 (fun j -> out.{i,j,0}))
+
+let replace_comma =
+  let r = Str.regexp "," in
+  Str.global_replace r "."
+
+let file_string file =
+  let file = open_in file in
+  let l = in_channel_length file in
+  let s = String.create l in
+  ignore(Pervasives.input file s 0 l);
+  s
+
+let load_calibration_file file =
+  let f s = Scanf.sscanf (replace_comma s) " %f %f %f\n %f %f %f\n %f %f %f\n\n %f %f %f %f %f"
+    (fun v11 v12 v13 v21 v22 v23 v31 v32 v33
+      v1 v2 v3 v4 v5 ->
+      [|[|v11;v12;v13|];
+        [|v21;v22;v23|];
+        [|v31;v32;v33|]|],
+      [|v1;v2;v3;v4;v5|]) in
+
+  let s = file_string file in
+  f s
+
+let load_homography_file file =
+  let f s = Scanf.sscanf (replace_comma s) " %f %f %f\n %f %f %f\n %f %f %f"
+    (fun v11 v12 v13 v21 v22 v23 v31 v32 v33 ->
+      [|[|v11;v12;v13|];
+        [|v21;v22;v23|];
+        [|v31;v32;v33|]|]) in
+
+  let s = file_string file in
+  f s
+
+
+external cvInvert :
+  [`Channel_1] cvMat_float64 ->
+  [`Channel_1] cvMat_float64 ->
+  float
+    = "ocaml_cvInvert"
+
+let invert src =
+  let src' = Array.map (fun e -> Array.map (fun x -> [|x|]) e) src in
+  let src_ba = Bigarray.Array3.of_array Bigarray.float64 Bigarray.c_layout src' in
+  let i = Bigarray.Array3.dim1 src_ba in
+  let j = Bigarray.Array3.dim2 src_ba in
+  let dst_ba = Bigarray.Array3.create Bigarray.float64 Bigarray.c_layout j i 1 in
+  let det = cvInvert src_ba dst_ba in
+  let dst = Array.init j
+    (fun x -> Array.init i (fun y -> dst_ba.{x,y,0})) in
+  det, dst
+
+let mult m v =
+  Array.init (Array.length m)
+    (fun k -> Array.fold_left (+.) 0.
+      (Array.mapi (fun i n -> v.(i) *. n) m.(k)))
