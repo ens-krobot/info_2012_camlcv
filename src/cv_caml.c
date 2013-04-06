@@ -312,12 +312,12 @@ static CvMat CvMat_val(value v) {
   void* data = Data_bigarray_val(v);
   int rows = Bigarray_val(v)->dim[0];
   int cols = Bigarray_val(v)->dim[1];
-  int channels = Bigarray_val(v)->dim[2];
+  int channels = (Bigarray_val(v)->num_dims == 2) ? 1 : Bigarray_val(v)->dim[2];
   int kind = Bigarray_val(v)->flags & BIGARRAY_KIND_MASK;
-  int type = 0;
+  int type = -1;
   switch (kind) {
 
-  case BIGARRAY_FLOAT32:
+  case CAML_BA_FLOAT32:
     switch (channels) {
     case 1:
       type = CV_32FC1;
@@ -333,7 +333,7 @@ static CvMat CvMat_val(value v) {
     }
     break;
 
-  case BIGARRAY_FLOAT64:
+  case CAML_BA_FLOAT64:
     switch (channels) {
     case 1:
       type = CV_64FC1;
@@ -349,7 +349,7 @@ static CvMat CvMat_val(value v) {
     }
     break;
 
-  case BIGARRAY_INT32:
+  case CAML_BA_INT32:
     switch (channels) {
     case 1:
       type = CV_32SC1;
@@ -365,10 +365,47 @@ static CvMat CvMat_val(value v) {
     }
     break;
 
+  case CAML_BA_UINT8:
+    switch (channels) {
+    case 1:
+      type = CV_8UC1;
+      break;
+    case 2:
+      type = CV_8UC2;
+      break;
+    case 3:
+      type = CV_8UC3;
+      break;
+    default:
+      break;
+    }
+    break;
+
+  case CAML_BA_SINT8:
+    switch (channels) {
+    case 1:
+      type = CV_8SC1;
+      break;
+    case 2:
+      type = CV_8SC2;
+      break;
+    case 3:
+      type = CV_8SC3;
+      break;
+    default:
+      break;
+    }
+    break;
+
   default:
     break;
   }
-  if(type == 0) caml_failwith("CvMat_val case not handled");
+
+  if(type == -1)
+    {
+      fflush(stdout);
+      caml_failwith("CvMat_val case not handled");
+    }
 
   return (cvMat(rows, cols, type, data));
 }
@@ -1344,6 +1381,42 @@ extern "C" CAMLprim value ocaml_HoughLinesP_bytecode( value * argv, int argn )
 {
   return ocaml_HoughLinesP( argv[0], argv[1], argv[2], argv[3],
                             argv[4], argv[5], argv[6] );
+}
+
+extern "C" CAMLprim value ocaml_HoughLinesP_mat(value vmat,
+                                                value vlines,
+                                                value rho,
+                                                value theta,
+                                                value threshold,
+                                                value minLineLength,
+                                                value maxLineGap)
+{
+  CAMLparam5( vmat, vlines, rho, theta, threshold );
+  CAMLxparam2( minLineLength, maxLineGap );
+
+  CvMat mat = CvMat_val(vmat);
+  Mat m = Mat(&mat);
+
+  /* Size s = m.size(); */
+  /* printf("mat: depth %i channels %i eltsize %i w %i h %i\n", m.channels(), m.depth(), m.elemSize(), s.width, s.height); */
+  /* fflush(stdout); */
+
+  ERRWRAP(
+  HoughLinesP(Mat(&mat),
+              *Vector_val<Vec4i>(vlines),
+              Double_val(rho),
+              Double_val(theta),
+              Int_val(threshold),
+              Double_val(minLineLength),
+              Double_val(maxLineGap)));
+
+  CAMLreturn(Val_unit);
+}
+
+extern "C" CAMLprim value ocaml_HoughLinesP_mat_bytecode( value * argv, int argn )
+{
+  return ocaml_HoughLinesP_mat( argv[0], argv[1], argv[2], argv[3],
+                                argv[4], argv[5], argv[6] );
 }
 
 extern "C" CAMLprim value ocaml_CvSeq_info(value vseq)

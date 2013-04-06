@@ -50,6 +50,19 @@ let depth_f32 = IPL_DEPTH_32F
 
 type 'a image_depth = 'a depth
 
+type ('channel) cvMat_float32 =
+    (float, Bigarray.float32_elt, Bigarray.c_layout) Bigarray.Array3.t
+
+type ('channel) cvMat_float64 =
+    (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array3.t
+
+type ('channel) cvMat_int =
+    (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array3.t
+(* there is no 64 bit type in CvMat... so stick to int32 *)
+
+type int_mat =
+  (int, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array2.t
+
 type color_conversion =
   | CV_BGR2BGRA
   | CV_RGB2RGBA
@@ -615,6 +628,17 @@ let houghLinesP img ?(minLineLength=0.) ?(maxLineGap=0.) rho theta threshold =
   houghLinesP' img vec rho theta threshold minLineLength maxLineGap;
   Array.init (vec4i_vect_size vec) (fun i -> vec4i_vect_get vec i)
 
+external houghLinesP_mat' :
+  int_mat ->
+  vec4i_vect ->
+  float -> float -> int -> float -> float -> unit
+    = "ocaml_HoughLinesP_mat_bytecode" "ocaml_HoughLinesP_mat"
+
+let houghLinesP_mat mat ?(minLineLength=0.) ?(maxLineGap=0.) rho theta threshold =
+  let vec = create_vec4i_vect () in
+  houghLinesP_mat' mat vec rho theta threshold minLineLength maxLineGap;
+  Array.init (vec4i_vect_size vec) (fun i -> vec4i_vect_get vec i)
+
 type calib_cb =
   | CV_CALIB_CB_ADAPTIVE_THRESH
   | CV_CALIB_CB_NORMALIZE_IMAGE
@@ -671,16 +695,6 @@ let find_corner_subpix ?(criteria=default_criteria) ?(winSize=11,11) ?(zeroZone=
     end
 
 (** camera calibration *)
-
-type ('channel) cvMat_float32 =
-    (float, Bigarray.float32_elt, Bigarray.c_layout) Bigarray.Array3.t
-
-type ('channel) cvMat_float64 =
-    (float, Bigarray.float64_elt, Bigarray.c_layout) Bigarray.Array3.t
-
-type ('channel) cvMat_int =
-    (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array3.t
-(* there is no 64 bit type in CvMat... so stick to int32 *)
 
 external cvCalibrateCamera2 : [`Channel_3] cvMat_float32 -> [`Channel_2] cvMat_float32 ->
   [`Channel_1] cvMat_int -> cvSize -> [`Channel_1] cvMat_float32 ->

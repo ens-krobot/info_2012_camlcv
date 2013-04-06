@@ -292,6 +292,15 @@ val good_features_to_track :
    ?maxLineGap:float -> float -> float -> int -> vec4i array
 (** [houghLinesP img rho theta threshold] *)
 
+type int_mat =
+  (int, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array2.t
+
+ val houghLinesP_mat :
+   int_mat ->
+   ?minLineLength:float ->
+   ?maxLineGap:float -> float -> float -> int -> vec4i array
+(** [houghLinesP img rho theta threshold] *)
+
 type calib_cb =
   | CV_CALIB_CB_ADAPTIVE_THRESH
   | CV_CALIB_CB_NORMALIZE_IMAGE
